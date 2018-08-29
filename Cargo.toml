@@ -1,0 +1,7 @@
+[package]
+name = "rush"
+version = "0.1.0"
+authors = ["psinghal20 <psinghal20@gmail.com>"]
+
+[dependencies]
+libc = "0.2"
