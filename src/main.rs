@@ -1,6 +1,6 @@
 extern crate libc;
 use std::env;
-use std::io;
+use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
 pub mod colors;
@@ -9,6 +9,9 @@ fn main() {
     loop {
         print_prompt();
         let mut command_string = String::new();
+        io::stdout()
+            .flush()
+            .expect("Failed to flush the Buffer");
         io::stdin()
             .read_line(&mut command_string)
             .expect("Failed to read the user command");
@@ -32,7 +35,7 @@ fn main() {
 
 fn print_prompt() {
     let path = env::current_dir().unwrap();
-    println!("{}>> RUSHING IN {}{}{}",colors::ANSI_BOLD, colors::ANSI_COLOR_CYAN, path.display(), colors::RESET);
+    print!("{}RUSHING IN {}{}\n\u{2ba1}{}  ",colors::ANSI_BOLD, colors::ANSI_COLOR_CYAN, path.display(), colors::RESET);
 }
 
 fn tokenize_commands(command_string: &mut String) -> Vec<Vec<&str> > {
