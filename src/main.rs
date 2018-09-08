@@ -3,11 +3,17 @@ use std::env;
 use std::io::{self, Write};
 use std::path::Path;
 use std::process::Command;
+use std::os::unix::process::CommandExt;
 pub mod colors;
 
 fn main() {
+    unsafe{
+        libc::signal(libc::SIGINT, libc::SIG_IGN);
+        libc::signal(libc::SIGQUIT, libc::SIG_IGN);
+    }
+    let mut last_exit_status = true;
     loop {
-        print_prompt();
+        print_prompt(last_exit_status);
         let mut command_string = String::new();
         io::stdout()
             .flush()
@@ -26,16 +32,26 @@ fn main() {
             }
             match command_tokens[0] {
                 "exit" => std::process::exit(0),
-                "cd" => change_dir(command_tokens[1]),
-                _ => execute_command(command_tokens, is_background),
+                "cd" => {
+                    last_exit_status = change_dir(command_tokens[1])
+                },
+                _ => {
+                    last_exit_status = execute_command(command_tokens, is_background);
+                }
             }
         }
     }
 }
 
-fn print_prompt() {
+fn print_prompt(last_exit_status: bool) {
     let path = env::current_dir().unwrap();
-    print!("{}RUSHING IN {}{}\n\u{2ba1}{}  ",colors::ANSI_BOLD, colors::ANSI_COLOR_CYAN, path.display(), colors::RESET);
+    println!("{}RUSHING IN {}{}{}  ",colors::ANSI_BOLD, colors::ANSI_COLOR_CYAN, path.display(), colors::RESET);
+    if last_exit_status {
+        print!("{}{}\u{2ba1}{}  ",colors::ANSI_BOLD,colors::GREEN,colors::RESET);
+    }
+    else{
+        print!("{}{}\u{2ba1}{}  ",colors::ANSI_BOLD,colors::RED,colors::RESET);
+    }
 }
 
 fn tokenize_commands(command_string: &mut String) -> Vec<Vec<&str> > {
@@ -48,24 +64,38 @@ fn tokenize_commands(command_string: &mut String) -> Vec<Vec<&str> > {
     command_tokens
 }
 
-fn execute_command(command_tokens: Vec<&str>, is_background: bool) {
+fn execute_command(command_tokens: Vec<&str>, is_background: bool) -> bool {
     let mut command_instance = Command::new(command_tokens[0]);
-    if let Ok(mut child) = command_instance.args(&command_tokens[1..]).spawn() {
-        if is_background == false {
-            child.wait().expect("command wasn't running");
+    if let Ok(mut child) = command_instance.args(&command_tokens[1..])
+        .before_exec(|| {
+            unsafe{
+                libc::signal(libc::SIGINT, libc::SIG_DFL);
+                libc::signal(libc::SIGQUIT, libc::SIG_DFL);
+            }
+            Result::Ok(())
+        })
+        .spawn() {
+            if is_background == false {
+                return child.wait().expect("command wasn't running").success();
+            }
+            else {
+               colors::success_logger(format!("{} started!", child.id()));
+               true
+            }
+        } else {
+            colors::error_logger("Command not found!".to_string());
+            false
         }
-        else {
-           colors::success_logger(format!("{} started!", child.id()));
-        }
-    } else {
-        colors::error_logger("Command not found!".to_string());
-    }
 }
 
-fn change_dir(new_path: &str) {
+fn change_dir(new_path: &str) -> bool {
     let new_path = Path::new(new_path);
     match env::set_current_dir(&new_path) {
-        Err(err) => println!("Failed to change the directory!\n{}", err),
+        Err(err) => {
+            colors::error_logger(format!("Failed to change the directory!\n{}", err));
+            return false;
+        },
         _ => (),
     }
+    return true;
 }
