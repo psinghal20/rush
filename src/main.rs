@@ -21,7 +21,16 @@ fn main() {
         io::stdin()
             .read_line(&mut command_string)
             .expect("Failed to read the user command");
-
+        command_string.pop();
+        while command_string.chars().last() == Some('\\') {
+            command_string.pop();
+            let mut next_string = String::new();
+            io::stdin()
+                .read_line(&mut next_string)
+                .expect("Failed to read the next line");
+            next_string.pop();
+            command_string.push_str(&next_string);
+        }
         let commands_tokens = tokenize_commands(&mut command_string);
 
         for mut command_tokens in commands_tokens {
@@ -55,11 +64,10 @@ fn print_prompt(last_exit_status: bool) {
 }
 
 fn tokenize_commands(command_string: &mut String) -> Vec<Vec<&str> > {
-    command_string.pop();
     let commands: Vec<&str> = command_string.split(';').collect();
     let mut command_tokens: Vec<Vec<&str> > = Vec::new();
     for command in commands.iter() {
-        command_tokens.push(command.split(' ').collect());
+        command_tokens.push(command.split_whitespace().collect());
     }
     command_tokens
 }
