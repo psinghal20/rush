@@ -31,21 +31,27 @@ fn main() {
             next_string.pop();
             command_string.push_str(&next_string);
         }
-        let commands_tokens = tokenize_commands(&mut command_string);
+        let commands = tokenize_commands(&mut command_string);
 
-        for mut command_tokens in commands_tokens {
-            let mut is_background = false;
-            if let Some(&"&") = command_tokens.last() {
-                is_background = true;
-                command_tokens.pop();
-            }
-            match command_tokens[0] {
-                "exit" => std::process::exit(0),
-                "cd" => {
-                    last_exit_status = change_dir(command_tokens[1])
-                },
-                _ => {
-                    last_exit_status = execute_command(command_tokens, is_background);
+        for mut command in commands {
+            last_exit_status = true;
+            for mut dependent_command in command {
+                let mut is_background = false;
+                if let Some(&"&") = dependent_command.last() {
+                    is_background = true;
+                    dependent_command.pop();
+                }
+                match dependent_command[0] {
+                    "exit" => std::process::exit(0),
+                    "cd" => {
+                        last_exit_status = change_dir(dependent_command[1]);
+                    },
+                    _ => {
+                        last_exit_status = execute_command(dependent_command, is_background);
+                    }
+                }
+                if last_exit_status == false {
+                    break;
                 }
             }
         }
@@ -63,11 +69,16 @@ fn print_prompt(last_exit_status: bool) {
     }
 }
 
-fn tokenize_commands(command_string: &mut String) -> Vec<Vec<&str> > {
+fn tokenize_commands(command_string: &mut String) -> Vec<Vec<Vec<&str>>> {
     let commands: Vec<&str> = command_string.split(';').collect();
-    let mut command_tokens: Vec<Vec<&str> > = Vec::new();
+    let mut command_tokens: Vec<Vec<Vec<&str>>> = Vec::new();
     for command in commands.iter() {
-        command_tokens.push(command.split_whitespace().collect());
+        let mut dependent_commands: Vec<&str> = command.split("&&").collect();
+        let mut temp_vec: Vec<Vec<&str>> = Vec::new();
+        for dependent_command in dependent_commands.iter() {
+            temp_vec.push(dependent_command.split_whitespace().collect());
+        }
+        command_tokens.push(temp_vec);
     }
     command_tokens
 }
