@@ -1,9 +1,12 @@
 extern crate libc;
+extern crate rustyline;
+
 use std::env;
-use std::io::{self, Write};
+use std::io;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
+use rustyline::Editor;
 pub mod colors;
 
 fn main() {
@@ -13,13 +16,9 @@ fn main() {
     }
     let mut last_exit_status = true;
     loop {
-        print_prompt(last_exit_status);
-        let mut command_string = String::new();
-        io::stdout().flush().expect("Failed to flush the Buffer");
-        io::stdin()
-            .read_line(&mut command_string)
-            .expect("Failed to read the user command");
-        command_string.pop();
+        let prompt_string = print_prompt(last_exit_status);
+        let mut rl = Editor::<()>::new();
+        let mut command_string = rl.readline(&prompt_string).unwrap();
         while command_string.chars().last() == Some('\\') {
             command_string.pop();
             let mut next_string = String::new();
@@ -56,25 +55,27 @@ fn main() {
     }
 }
 
-fn print_prompt(last_exit_status: bool) {
+fn print_prompt(last_exit_status: bool) -> String {
     let path = env::current_dir().unwrap();
-    println!(
-        "{}RUSHING IN {}{}{}  ",
+    let prompt = format!(
+        "{}RUSHING IN {}{}{}\n",
         colors::ANSI_BOLD,
         colors::ANSI_COLOR_CYAN,
         path.display(),
         colors::RESET
     );
     if last_exit_status {
-        print!(
-            "{}{}\u{2ba1}{}  ",
+        return format!(
+            "{}{}{}\u{2ba1}{}  ",
+            prompt,
             colors::ANSI_BOLD,
             colors::GREEN,
             colors::RESET
         );
     } else {
-        print!(
-            "{}{}\u{2ba1}{}  ",
+        return format!(
+            "{}{}{}\u{2ba1}{}  ",
+            prompt,
             colors::ANSI_BOLD,
             colors::RED,
             colors::RESET
