@@ -6,6 +6,7 @@ use std::io;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
+use std::fs::File;
 use rustyline::Editor;
 pub mod colors;
 
@@ -15,10 +16,16 @@ fn main() {
         libc::signal(libc::SIGQUIT, libc::SIG_IGN);
     }
     let mut last_exit_status = true;
+    let mut rl = Editor::<()>::new();
+    let home = env::var("HOME").unwrap();
+    if rl.load_history(&format!("{}/.rush_history", home)).is_err() {
+        println!("No previous history.");
+        File::create(format!("{}/.rush_history", home)).expect("Couldn't create history file");
+    }
     loop {
         let prompt_string = print_prompt(last_exit_status);
-        let mut rl = Editor::<()>::new();
         let mut command_string = rl.readline(&prompt_string).unwrap();
+        rl.add_history_entry(command_string.as_ref());
         while command_string.chars().last() == Some('\\') {
             command_string.pop();
             let mut next_string = String::new();
@@ -39,7 +46,10 @@ fn main() {
                     dependent_command.pop();
                 }
                 match dependent_command[0] {
-                    "exit" => std::process::exit(0),
+                    "exit" => {
+                        rl.save_history(&format!("{}/.rush_history", home)).expect("Couldn't save history");
+                        std::process::exit(0);
+                    },
                     "cd" => {
                         last_exit_status = change_dir(dependent_command[1]);
                     }
