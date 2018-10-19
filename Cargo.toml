@@ -5,3 +5,4 @@ authors = ["psinghal20 <psinghal20@gmail.com>"]
 
 [dependencies]
 libc = "0.2"
+rustyline = "2.1.0"
