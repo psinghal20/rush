@@ -10,6 +10,7 @@ An experimental shell, developed to gain a little experience with Rust and unix 
 - `;` implementation
 - `&&` implementation
 - Simple signal handling
+- Command Support
 
 ## Future Plans
 - Pipes
