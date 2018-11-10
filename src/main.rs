@@ -23,19 +23,9 @@ fn main() {
         File::create(format!("{}/.rush_history", home)).expect("Couldn't create history file");
     }
     loop {
-        let prompt_string = print_prompt(last_exit_status);
-        let mut command_string = rl.readline(&prompt_string).unwrap();
-        rl.add_history_entry(command_string.as_ref());
-        while command_string.chars().last() == Some('\\') {
-            command_string.pop();
-            let mut next_string = String::new();
-            io::stdin()
-                .read_line(&mut next_string)
-                .expect("Failed to read the next line");
-            next_string.pop();
-            command_string.push_str(&next_string);
-        }
-        let commands = tokenize_commands(&mut command_string);
+        let prompt_string = generate_prompt(last_exit_status);
+        let command_string = read_command(&mut rl, prompt_string);
+        let commands = tokenize_commands(&command_string);
 
         for mut command in commands {
             last_exit_status = true;
@@ -65,7 +55,22 @@ fn main() {
     }
 }
 
-fn print_prompt(last_exit_status: bool) -> String {
+fn read_command(rl: &mut Editor<()>, prompt_string: String) -> String {
+    let mut command_string = rl.readline(&prompt_string).unwrap();
+
+    // this allows for multiline commands
+    while command_string.chars().last() == Some('\\') {
+        command_string.pop(); // remove the trailing backslash
+        let next_string = rl.readline("").unwrap();
+        command_string.push_str(&next_string);
+    }
+
+    // add command to history after handling multi-line input
+    rl.add_history_entry(command_string.as_ref());
+    command_string
+}
+
+fn generate_prompt(last_exit_status: bool) -> String {
     let path = env::current_dir().unwrap();
     let prompt = format!(
         "{}RUSHING IN {}{}{}\n",
@@ -93,7 +98,7 @@ fn print_prompt(last_exit_status: bool) -> String {
     }
 }
 
-fn tokenize_commands(command_string: &mut String) -> Vec<Vec<Vec<&str>>> {
+fn tokenize_commands(command_string: &str) -> Vec<Vec<Vec<&str>>> {
     let commands: Vec<&str> = command_string.split(';').collect();
     let mut command_tokens: Vec<Vec<Vec<&str>>> = Vec::new();
     for command in commands.iter() {
