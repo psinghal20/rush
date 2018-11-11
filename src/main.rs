@@ -2,13 +2,16 @@ extern crate libc;
 extern crate rustyline;
 
 use std::env;
-use std::io;
 use std::os::unix::process::CommandExt;
 use std::path::Path;
 use std::process::Command;
 use std::fs::File;
 use rustyline::Editor;
-pub mod colors;
+
+mod colors;
+mod tokens;
+
+use tokens::tokenize_commands;
 
 fn main() {
     unsafe {
@@ -96,20 +99,6 @@ fn generate_prompt(last_exit_status: bool) -> String {
             colors::RESET
         );
     }
-}
-
-fn tokenize_commands(command_string: &str) -> Vec<Vec<Vec<&str>>> {
-    let commands: Vec<&str> = command_string.split(';').collect();
-    let mut command_tokens: Vec<Vec<Vec<&str>>> = Vec::new();
-    for command in commands.iter() {
-        let mut dependent_commands: Vec<&str> = command.split("&&").collect();
-        let mut temp_vec: Vec<Vec<&str>> = Vec::new();
-        for dependent_command in dependent_commands.iter() {
-            temp_vec.push(dependent_command.split_whitespace().collect());
-        }
-        command_tokens.push(temp_vec);
-    }
-    command_tokens
 }
 
 fn execute_command(command_tokens: Vec<&str>, is_background: bool) -> bool {
