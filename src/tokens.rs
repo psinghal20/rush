@@ -45,6 +45,8 @@ mod tests {
         let commands = "long-running-process & date";
         let tokens = tokenize_commands(commands);
 
+        // TODO this case is not correct
+        // it should be `assert_eq!(vec![vec![vec!["long-running-process &"]], vec![vec!["date"]]], tokens);`
         assert_eq!(vec![vec![vec!["long-running-process", "&", "date"]]], tokens);
     }
 
