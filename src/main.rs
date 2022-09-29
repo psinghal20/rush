@@ -69,7 +69,7 @@ fn read_command(rl: &mut Editor<()>, prompt_string: String) -> String {
     }
 
     // add command to history after handling multi-line input
-    rl.add_history_entry(command_string.clone());
+    rl.add_history_entry(&command_string);
     command_string
 }
 
