@@ -19,7 +19,7 @@ fn main() {
         libc::signal(libc::SIGQUIT, libc::SIG_IGN);
     }
     let mut last_exit_status = true;
-    let mut rl = Editor::<()>::new();
+    let mut rl = Editor::<()>::new().unwrap();
     let home = env::var("HOME").unwrap();
     if rl.load_history(&format!("{}/.rush_history", home)).is_err() {
         println!("No previous history.");
@@ -69,7 +69,7 @@ fn read_command(rl: &mut Editor<()>, prompt_string: String) -> String {
     }
 
     // add command to history after handling multi-line input
-    rl.add_history_entry(command_string.as_ref());
+    rl.add_history_entry(command_string.clone());
     command_string
 }
 
